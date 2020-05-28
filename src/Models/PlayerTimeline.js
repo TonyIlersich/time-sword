@@ -1,5 +1,7 @@
 export const ActionTypes = {
   Attack: 'Attack',
+  Drop: 'Drop',
+  Rise: 'Rise',
   StartMovingLeft: 'Start Moving Left',
   StartMovingRight: 'Start Moving Right',
   StopMoving: 'Stop Moving',

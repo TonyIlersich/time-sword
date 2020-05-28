@@ -12,60 +12,21 @@ import Crystal from "./Crystal";
 
 const RoomSize = 52;
 const RoomMargin = 6;
-const RoomSpacing = RoomSize + RoomMargin;
+export const RoomSpacing = RoomSize + RoomMargin;
 
 export default class Game {
   constructor() {
-    this.width = 10;
-    this.height = 5;
-    this.corners = [];
-    this.floors = [];
-    this.rooms = [];
-    this.walls = [];
-    for (let c = 0; c <= this.width; c++) {
-      for (let r = 0; r <= this.height; r++) {
-        this.setCorner(c, r, Direction.UpLeft, new Corner(
-          r === 0 || r === this.height || c === 0 || c === this.width
-            ? CornerType.Solid
-            : CornerType.Empty,
-          new Vector(c * RoomSpacing, r * RoomSpacing)
-        ));
-      }
-    }
-    for (let c = 0; c < this.width; c++) {
-      for (let r = 0; r <= this.height; r++) {
-        this.setFloor(c, r, Direction.Up, new Floor(
-          r === 0 || r === this.height ? FloorType.Solid : FloorType.Empty,
-          new Vector(c * RoomSpacing + RoomMargin, r * RoomSpacing)
-        ));
-      }
-    }
-    for (let c = 0; c < this.width; c++) {
-      for (let r = 0; r < this.height; r++) {
-        this.setRoom(c, r, new Room(
-          RoomType.Empty,
-          new Vector(c * RoomSpacing + RoomMargin, r * RoomSpacing + RoomMargin)
-        ));
-      }
-    }
-    for (let c = 0; c <= this.width; c++) {
-      for (let r = 0; r < this.height; r++) {
-        this.setWall(c, r, Direction.Left, new Wall(
-          c === 0 || c === this.width ? WallType.Solid : WallType.Empty,
-          new Vector(c * RoomSpacing, r * RoomSpacing + RoomMargin)
-        ));
-      }
-    }
+    this.generate();
     this.time = 0;
     this.maxTime = 5 * 60;
     this.crystal = new Crystal(
       this.maxTime,
-      new Vector(2 * RoomSpacing + RoomMargin, 2 * RoomSpacing + RoomMargin),
-      new Vector(4 * RoomSpacing + RoomMargin, 1 * RoomSpacing + RoomMargin),
-      new Vector(1 * RoomSpacing + RoomMargin, 0 * RoomSpacing + RoomMargin),
-      new Vector(0 * RoomSpacing + RoomMargin, 2 * RoomSpacing + RoomMargin),
+      new Array(30).fill('').map(() => new Vector(
+        Math.floor(Math.random() * this.width / 2 + this.width) * RoomSpacing + RoomMargin,
+        Math.floor(Math.random() * this.height / 2 + this.height) * RoomSpacing + RoomMargin
+      )),
     );
-    this.player = new Player(new Vector(RoomMargin, RoomMargin));
+    this.player = new Player(new Vector(1 * RoomSpacing + RoomMargin, 0 * RoomSpacing + RoomMargin));
     this.playerTimeline = new PlayerTimeline();
     this.playerTimeline.beginSegment(this.time, this.player);
     this.timeClones = [];
@@ -76,6 +37,82 @@ export default class Game {
     this.snapshotInteval = 4.9;
     this.isTimeFrozen = false;
     this.saveSnapshot();
+  }
+  generate() {
+    this.width = 15;
+    this.height = 8;
+    const nodes = new Array(this.width * this.height).fill('').map((_, idx) => idx);
+    const first = Math.floor(Math.random() * this.width * this.height);
+    const edges = [];
+    const stack = [first];
+    const visited = [first];
+    while (stack.length > 0) {
+      const current = stack[0];
+      const nbrs = nodes.filter(i => {
+        if (i === current - this.width) return current % 2 === 1;
+        if (i === current - 1) return current % this.width > 0;
+        if (i === current + 1) return current % this.width + 1 < this.width;
+        if (i === current + this.width) return current % 2 === 0;
+        return false;
+      });
+      const unvisited = nbrs.filter(i => !visited.includes(i)).sort(() => Math.random() < .5);
+      if (unvisited.length === 0) {
+        stack.shift();
+      } else {
+        const chosen = unvisited[0];
+        edges.push({ i: current, j: chosen });
+        visited.push(chosen);
+        stack.unshift(chosen);
+      }
+    }
+    this.corners = [];
+    this.floors = [];
+    this.rooms = [];
+    this.walls = [];
+    for (let c = 0; c <= this.width; c++) {
+      for (let r = 0; r <= this.height; r++) {
+        this.setCorner(c, r, Direction.UpLeft, new Corner(
+          CornerType.Solid,
+          new Vector(c * RoomSpacing, r * RoomSpacing)
+        ));
+      }
+    }
+    for (let c = 0; c < this.width; c++) {
+      for (let r = 0; r <= this.height; r++) {
+        const type = edges.some(({ i, j }) =>
+          (c + r * this.width === i && c + (r - 1) * this.width === j) ||
+          (c + r * this.width === j && c + (r - 1) * this.width === i))
+          ? FloorType.Semisolid : FloorType.Solid;
+        this.setFloor(c, r, Direction.Up, new Floor(
+          type,
+          new Vector(c * RoomSpacing + RoomMargin, r * RoomSpacing)
+        ));
+      }
+    }
+    for (let c = 0; c < this.width; c++) {
+      for (let r = 0; r < this.height; r++) {
+        const type = edges.some(({ i, j }) =>
+          (c + r * this.width === i && c + (r - 1) * this.width === j) ||
+          (c + r * this.width === j && c + (r - 1) * this.width === i))
+          ? RoomType.DownRamp : RoomType.Empty;
+        this.setRoom(c, r, new Room(
+          type,
+          new Vector(c * RoomSpacing + RoomMargin, r * RoomSpacing + RoomMargin)
+        ));
+      }
+    }
+    for (let c = 0; c <= this.width; c++) {
+      for (let r = 0; r < this.height; r++) {
+        const type = edges.some(({ i, j }) =>
+          (c - 1 + r * this.width === i && c + r * this.width === j) ||
+          (c - 1 + r * this.width === j && c + r * this.width === i))
+          ? WallType.Empty : WallType.Solid;
+        this.setWall(c, r, Direction.Left, new Wall(
+          type,
+          new Vector(c * RoomSpacing, r * RoomSpacing + RoomMargin)
+        ));
+      }
+    }
   }
   saveSnapshot() {
     this.snapshots.push({
@@ -197,7 +234,19 @@ export default class Game {
     }
     return this.walls[c + r * (this.width + 1) + offset];
   }
+  getEndState() {
+    if (this.time < this.maxTime) {
+      return null;
+    } else if (this.player.hasCrystal) {
+      return { title: 'You Win!', desc: 'You saved spacetime!' };
+    } else {
+      return { title: 'Game Over!', desc: 'Time has run out, and the spacetime continuum has collapsed!' };
+    }
+  }
   update = frame => {
+    if (this.time >= this.maxTime) {
+      return;
+    }
     if (InputManager.wasPressedThisFrame['KeyK']) {
       this.isTimeFrozen = !this.isTimeFrozen;
       if (this.isTimeFrozen) {
@@ -227,19 +276,42 @@ export default class Game {
         this.saveSnapshot();
       }
       this.timeClones.forEach(tc => tc.fastForward(this.time));
+      // figure out which room the player is in
+      const relativePos = this.player.getWorldCenter()
+        .add(new Vector(0, RoomSpacing / 2))
+        .subtract(new Vector(RoomMargin / 2, RoomMargin / 2))
+        .scale(1 / RoomSpacing);
+      const c = Math.floor(relativePos.x);
+      const r = Math.floor(relativePos.y) - 1;
+      const room = this.rooms[c + r * this.width];
+      const floor = this.getFloor(c, r, Direction.Down);
       let step = new Vector();
+      if (InputManager.wasPressedThisFrame['KeyS'] && floor.type === FloorType.Semisolid) {
+        step = step.add(new Vector(0, RoomSpacing));
+        this.playerTimeline.pushAction(ActionTypes.Drop, this.time);
+      } else if (InputManager.wasPressedThisFrame['KeyW'] && room.type === RoomType.DownRamp) {
+        step = step.subtract(new Vector(0, RoomSpacing));
+        this.playerTimeline.pushAction(ActionTypes.Rise, this.time);
+      }
       if (InputManager.isKeyDown['KeyD']) {
         if (!this.player.isAttacking()) {
-          step = step.add(new Vector(1, 0));
+          step = step.add(new Vector(playerSpeed * frame.fixedDeltaTime, 0));
         }
       }
       if (InputManager.isKeyDown['KeyA']) {
         if (!this.player.isAttacking()) {
-          step = step.add(new Vector(-1, 0));
+          step = step.add(new Vector(-playerSpeed * frame.fixedDeltaTime, 0));
         }
       }
+      const wall = !!step.x && this.getWall(c, r, step.x < 0 ? Direction.Left : Direction.Right);
+      if (wall && wall.type === WallType.Solid && (
+        (step.x < 0 && relativePos.x % 1 < this.player.width / RoomSpacing) ||
+        (step.x > 0 && relativePos.x % 1 > 1 - this.player.width / RoomSpacing)
+      )) {
+        step.x = 0;
+      }
       if (!step.isZero()) {
-        this.player.pos = this.player.pos.add(step.scale(playerSpeed * frame.fixedDeltaTime));
+        this.player.pos = this.player.pos.add(step);
       }
       if (step.x < 0 && this.player.moving !== Direction.Left) {
         this.player.setMoving(Direction.Left);
@@ -263,6 +335,11 @@ export default class Game {
       }
       if (InputManager.wasPressedThisFrame['KeyJ']) {
         this.player.beginAttack();
+        this.playerTimeline.pushAction(ActionTypes.Attack, this.time);
+      }
+      if (!this.player.hasCrystal && this.player.pos.subtract(this.crystal.getPos(this.time)).isZero(RoomSpacing / 2)) {
+        this.player.hasCrystal = true;
+        this.crystal.isCollected = true;
       }
       this.player.update(frame);
       this.time += frame.fixedDeltaTime;

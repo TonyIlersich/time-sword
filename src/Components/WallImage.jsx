@@ -13,7 +13,7 @@ export default ({ type, x, y, width, height }) => {
       src = Sprites.WallSolid;
       break;
     default:
-      throw new Error(`unexpected room type: ${type}`);
+      throw new Error(`unexpected wall type: ${type}`);
   }
   return (
     <Sprite href={src} x={x} y={y} width={width} height={height} />

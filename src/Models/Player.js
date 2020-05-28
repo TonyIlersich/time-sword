@@ -10,6 +10,7 @@ export default class Player {
     this.attackDuration = .1;
     this.facing = Direction.Right;
     this.moving = Direction.None;
+    this.width = 13;
   }
   setMoving(direction) {
     this.moving = direction;

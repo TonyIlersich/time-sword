@@ -10,7 +10,7 @@ export default ({ type, x, y, width, height }) => {
       src = Sprites.FloorEmpty;
       break;
     case FloorType.Semisolid:
-      // TODO
+      src = Sprites.FloorSemisolid;
       break;
     case FloorType.Solid:
       src = Sprites.FloorSolid;

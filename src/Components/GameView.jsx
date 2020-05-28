@@ -23,16 +23,16 @@ export default ({ game }) => {
   );
   return (
     <Container viewBox='0 0 320 180'>
-      {game.rooms.map((room, idx) => (
+      {game.rooms.filter(room => room.isOnScreen(topLeft)).map((room, idx) => (
         <RoomImage key={idx} type={room.type} {...room.pos.subtract(topLeft)} size={52} />
       ))}
-      {game.walls.map((wall, idx) => (
+      {game.walls.filter(wall => wall.isOnScreen(topLeft)).map((wall, idx) => (
         <WallImage key={idx} type={wall.type} {...wall.pos.subtract(topLeft)} width={6} height={52} />
       ))}
-      {game.floors.map((floor, idx) => (
+      {game.floors.filter(floor => floor.isOnScreen(topLeft)).map((floor, idx) => (
         <FloorImage key={idx} type={floor.type} {...floor.pos.subtract(topLeft)} width={52} height={6} />
       ))}
-      {game.corners.map((corner, idx) => (
+      {game.corners.filter(corner => corner.isOnScreen(topLeft)).map((corner, idx) => (
         <CornerImage key={idx} type={corner.type} {...corner.pos.subtract(topLeft)} size={6} />
       ))}
       {game.crystal.doesExist(game.time) && (
@@ -50,7 +50,7 @@ export default ({ game }) => {
         facing={game.player.facing}
         isWarping={game.isTimeFrozen}
       />
-      {game.timeClones.map((tc, idx) => tc.doesExist(game.time) ? (
+      {game.timeClones.map((tc, idx) => tc.doesExist(game.time) && (
         <PlayerImage
           key={idx}
           {...tc.pos.subtract(topLeft)}
@@ -59,8 +59,9 @@ export default ({ game }) => {
           facing={tc.facing}
           isFaded
         />
-      ) : null)}
+      ))}
       <TimerOverlay timeRemaining={game.maxTime - game.time} />
+      {game.player.hasCrystal && <Sprite href={Sprites.Vignette} x={0} y={0} width={320} height={180} />}
     </Container>
   );
 };

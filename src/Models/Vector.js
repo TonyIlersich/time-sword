@@ -3,8 +3,8 @@ export default class Vector {
     this.x = x || 0;
     this.y = y || 0;
   }
-  isZero() {
-    return this.x === 0 && this.y === 0;
+  isZero(epsilon = 0) {
+    return Math.abs(this.x) <= epsilon && Math.abs(this.y) <= epsilon;
   }
   isNaN() {
     return Number.isNaN(this.x) || Number.isNaN(this.y);

@@ -7,7 +7,7 @@ export default ({ type, x, y, size }) => {
   let src;
   switch (type) {
     case RoomType.DownRamp:
-      // TODO
+      src = Sprites.RoomStairs;
       break;
     case RoomType.Empty:
       src = Sprites.RoomEmpty;
