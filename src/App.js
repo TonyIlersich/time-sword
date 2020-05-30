@@ -4,13 +4,14 @@ import Game from './Models/Game';
 import Frame from './Models/Frame';
 import InputManager from './Utils/InputManager';
 
+const fps = 24;
+
 export default class App extends React.Component {
   state = {
     game: null,
   };
 
   componentDidMount() {
-    const fps = 24;
     this.setState({ game: new Game(), frame: new Frame(fps) });
     this._intervalHandle = setInterval(this._onUpdate, 1000 / fps);
     InputManager.register();
@@ -23,8 +24,12 @@ export default class App extends React.Component {
 
   render() {
     return this.state.game && (
-      <GameView game={this.state.game} />
+      <GameView game={this.state.game} onRestart={this._onRestart} />
     );
+  }
+
+  _onRestart = () => {
+    this.setState({ game: new Game(), frame: new Frame(fps) });
   }
 
   _onUpdate = () => {

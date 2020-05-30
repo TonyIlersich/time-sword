@@ -11,6 +11,11 @@ export default class Player {
     this.facing = Direction.Right;
     this.moving = Direction.None;
     this.width = 13;
+    this.crystalCount = 0;
+    this.isDead = false;
+  }
+  onReceiveShot() {
+    this.isDead = true;
   }
   setMoving(direction) {
     this.moving = direction;

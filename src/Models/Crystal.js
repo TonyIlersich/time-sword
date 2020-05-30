@@ -3,6 +3,7 @@ export default class Crystal {
     this.maxTime = maxTime;
     this.positions = positions;
     this.isCollected = false;
+    console.log(positions);
   }
   doesExist(time) {
     return !this.isCollected && time % 10 >= 7;

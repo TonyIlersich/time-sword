@@ -9,33 +9,33 @@ import Direction from "./Direction";
 import PlayerTimeline, { ActionTypes } from "./PlayerTimeline";
 import TimeClone from "./TimeClone";
 import Crystal from "./Crystal";
+import Enemy from "./Enemy";
+import Bullet from "./Bullet";
 
 const RoomSize = 52;
-const RoomMargin = 6;
+export const RoomMargin = 6;
 export const RoomSpacing = RoomSize + RoomMargin;
 
 export default class Game {
+  static totalCrystalCount = 5;
+
   constructor() {
     this.generate();
     this.time = 0;
-    this.maxTime = 5 * 60;
-    this.crystal = new Crystal(
-      this.maxTime,
-      new Array(30).fill('').map(() => new Vector(
-        Math.floor(Math.random() * this.width / 2 + this.width) * RoomSpacing + RoomMargin,
-        Math.floor(Math.random() * this.height / 2 + this.height) * RoomSpacing + RoomMargin
-      )),
-    );
+    this.maxTime = 2.5 * 60;
+    this.makeCrystal();
     this.player = new Player(new Vector(1 * RoomSpacing + RoomMargin, 0 * RoomSpacing + RoomMargin));
     this.playerTimeline = new PlayerTimeline();
     this.playerTimeline.beginSegment(this.time, this.player);
     this.timeClones = [];
     this.timeLockedObjects = {
-      enemies: [],
+      enemies: [new Enemy(new Vector(2 * RoomSpacing + RoomMargin, 0 * RoomSpacing + RoomMargin))],
+      bullets: new Array(1000).fill('').map(b => new Bullet()),
     };
     this.snapshots = [];
     this.snapshotInteval = 4.9;
     this.isTimeFrozen = false;
+    this.isPaused = true;
     this.saveSnapshot();
   }
   generate() {
@@ -56,6 +56,14 @@ export default class Game {
         return false;
       });
       const unvisited = nbrs.filter(i => !visited.includes(i)).sort(() => Math.random() < .5);
+      // add some extra connections
+      nbrs
+        .filter(i => !unvisited.includes(i))
+        .forEach(i => {
+          if (Math.random() < .2) {
+            edges.push({ i, j: current });
+          }
+        });
       if (unvisited.length === 0) {
         stack.shift();
       } else {
@@ -114,15 +122,26 @@ export default class Game {
       }
     }
   }
+  makeCrystal() {
+    this.crystal = new Crystal(
+      this.maxTime,
+      new Array(30).fill('').map(() => new Vector(
+        Math.floor(Math.random() * this.width) * RoomSpacing + RoomMargin,
+        Math.floor(Math.random() * this.height) * RoomSpacing + RoomMargin
+      )),
+    );
+  }
   saveSnapshot() {
     this.snapshots.push({
       time: this.time,
       enemies: this.timeLockedObjects.enemies.map(e => e.makeSnapshot()),
+      bullets: this.timeLockedObjects.bullets.map(b => b.makeSnapshot()),
     });
   }
   loadSnapshot(snapshot) {
     this.time = snapshot.time;
     this.timeLockedObjects.enemies.forEach((e, idx) => e.loadSnapshot(snapshot.enemies[idx]));
+    this.timeLockedObjects.bullets.forEach((e, idx) => e.loadSnapshot(snapshot.bullets[idx]));
   }
   previewSnapshot(snapshotId) {
     const snapshot = this.snapshots[snapshotId];
@@ -235,16 +254,20 @@ export default class Game {
     return this.walls[c + r * (this.width + 1) + offset];
   }
   getEndState() {
-    if (this.time < this.maxTime) {
-      return null;
-    } else if (this.player.hasCrystal) {
-      return { title: 'You Win!', desc: 'You saved spacetime!' };
-    } else {
+    if (this.player.isDead) {
+      return { title: 'Game Over!', desc: 'You got shot. Remember you can deflect the lasers with your sword, and you can always jump back in time to dodge a laser.' };
+    } else if (this.timeClones.some(tc => tc.isDead)) {
+      return { title: 'Game Over!', desc: 'One of your time clones got shot. Remember they cannot react if they past changes. Protect your timeline!' };
+    } else if (this.time >= this.maxTime && this.player.crystalCount === this.totalCrystalCount) {
+      return { title: 'You Win!', desc: 'You collected all the crystals and saved spacetime!' };
+    } else if (this.time >= this.maxTime) {
       return { title: 'Game Over!', desc: 'Time has run out, and the spacetime continuum has collapsed!' };
+    } else {
+      return null;
     }
   }
   update = frame => {
-    if (this.time >= this.maxTime) {
+    if (this.time >= this.maxTime || this.player.isDead || this.timeClones.some(tc => tc.isDead) || this.isPaused) {
       return;
     }
     if (InputManager.wasPressedThisFrame['KeyK']) {
@@ -257,7 +280,7 @@ export default class Game {
         this.previewSnapshot(this.previewSnapshotId);
       } else {
         this.playerTimeline.beginSegment(this.time, this.player);
-        // TODO commit to preview snapshot and delete future snapshots
+        this.snapshots = this.snapshots.slice(0, this.previewSnapshotId + 1);
       }
     }
     if (this.isTimeFrozen) {
@@ -337,10 +360,46 @@ export default class Game {
         this.player.beginAttack();
         this.playerTimeline.pushAction(ActionTypes.Attack, this.time);
       }
-      if (!this.player.hasCrystal && this.player.pos.subtract(this.crystal.getPos(this.time)).isZero(RoomSpacing / 2)) {
-        this.player.hasCrystal = true;
-        this.crystal.isCollected = true;
+      if (this.crystal.doesExist(this.time) && this.player.pos.subtract(this.crystal.getPos(this.time)).isZero(RoomSpacing / 2)) {
+        this.player.crystalCount++;
+        if (this.player.crystalCount < this.totalCrystalCount) {
+          this.makeCrystal();
+        } else {
+          this.crystal.isCollected = true;
+        }
       }
+      this.timeLockedObjects.bullets.forEach(b => {
+        if (!b.exists) return;
+        const bStep = new Vector(b.direction === Direction.Left ? -1 : 1).scale(150 * frame.fixedDeltaTime);
+        b.pos = b.pos.add(bStep);
+        if (b.isInWall(this)) {
+          b.stop();
+        } else {
+          const shootables = [
+            this.player,
+            ...this.timeClones.filter(tc => tc.doesExist(this.time)),
+            ...this.timeLockedObjects.enemies.filter(e => !e.isDead),
+          ];
+          shootables.forEach(s => {
+            if (b.isTouchingPerson(s.getWorldCenter())) {
+              s.onReceiveShot();
+            }
+          });
+        }
+      });
+      this.timeLockedObjects.enemies.forEach(e => {
+        const targets = [this.player, ...this.timeClones];
+        targets.forEach(t => {
+          if (e.canSee(this, t.getWorldCenter()) && e.canShoot(this.time)) {
+            e.shoot(this.time);
+            const bullet = this.timeLockedObjects.bullets.find(b => !b.exists);
+            const offset = new Vector(13, 0);
+            e.facing === Direction.Left
+              ? bullet.goLeft(e.pos.subtract(offset))
+              : bullet.goRight(e.pos.add(offset));
+          }
+        });
+      });
       this.player.update(frame);
       this.time += frame.fixedDeltaTime;
     }

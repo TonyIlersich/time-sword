@@ -8,7 +8,11 @@ export default class TimeClone {
   constructor(timelineSegment) {
     this.timelineSegment = timelineSegment;
     this.attackDuration = .1; // keep this the same as in Player
+    this.isDead = false;
     this.reset();
+  }
+  onReceiveShot() {
+    this.isDead = true;
   }
   setMoving(direction) {
     this.moving = direction;
@@ -88,5 +92,8 @@ export default class TimeClone {
         this.pos = this.pos.subtract(step);
       }
     }
+  }
+  getWorldCenter() {
+    return this.pos.add(new Vector(26, 26));
   }
 }

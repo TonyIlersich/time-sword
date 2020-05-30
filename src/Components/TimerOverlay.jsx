@@ -13,8 +13,8 @@ const Text = styled.text`
 `;
 
 export default ({ timeRemaining }) => {
-  const mm = Math.floor(Math.max(0, timeRemaining) / 60);
-  const ss = Math.max(0, Math.floor(timeRemaining)) % 60;
+  const mm = Math.floor(Math.max(0, timeRemaining + 1) / 60);
+  const ss = Math.max(0, Math.floor(timeRemaining + 1)) % 60;
   return (
     <Text y={107} x={320} timeRemaining={timeRemaining}>
       {mm.toFixed(0).padStart(2, '0')}:{ss.toFixed(0).padStart(2, '0')}
