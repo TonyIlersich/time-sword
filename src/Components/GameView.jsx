@@ -12,7 +12,6 @@ import { Sprites, Music } from '../Utils/AssetManager';
 import EnemyImage from './EnemyImage';
 import Popup from './Popup';
 import Game from '../Models/Game';
-import VolumeSlider from './VolumeSlider';
 
 const Container = styled.div`
   width: min(100vw, 177.778vh);
