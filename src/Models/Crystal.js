@@ -3,12 +3,11 @@ export default class Crystal {
     this.maxTime = maxTime;
     this.positions = positions;
     this.isCollected = false;
-    console.log(positions);
   }
-  doesExist(time) {
-    return !this.isCollected && time % 10 >= 7;
+  doesExist() {
+    return !this.isCollected;
   }
   getPos(time) {
-    return this.positions[Math.floor(time / this.maxTime * this.positions.length)];
+    return this.positions[Math.floor(time / this.maxTime * this.positions.length)] || this.positions[0];
   }
 }

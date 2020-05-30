@@ -4,9 +4,9 @@ import Vector from "./Vector";
 import { RoomSpacing, RoomMargin } from "./Game";
 
 export default class Enemy {
-  constructor(pos) {
+  constructor(pos, facing) {
     this.pos = pos;
-    this.facing = Math.random() < .5 ? Direction.Left : Direction.Right;
+    this.facing = facing;
     this.moving = Direction.None;
     this.shootInterval = 1.5;
     this.flareDuration = .4;

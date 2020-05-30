@@ -52,14 +52,14 @@ const Spacer = styled.div`
   flex-direction: column;
 `;
 
-export default ({ title, desc, onContinue }) => (
+export default ({ title, desc, button, onContinue }) => (
   <Container>
     <H1>{title}</H1>
     <Hr />
     {desc}
     <Spacer />
     <Button onClick={onContinue}>
-      Continue
+      {button}
     </Button>
   </Container>
 );

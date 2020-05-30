@@ -8,10 +8,11 @@ import PlayerImage from './PlayerImage';
 import Vector from '../Models/Vector';
 import TimerOverlay from './TimerOverlay';
 import Sprite from './Common/Sprite';
-import { Sprites } from '../Utils/AssetManager';
+import { Sprites, Music } from '../Utils/AssetManager';
 import EnemyImage from './EnemyImage';
 import Popup from './Popup';
 import Game from '../Models/Game';
+import VolumeSlider from './VolumeSlider';
 
 const Container = styled.div`
   width: min(100vw, 177.778vh);
@@ -26,20 +27,32 @@ const Svg = styled.svg`
 
 const introPopupProps = {
   title: 'Protect Your Timeline!',
-  desc: `A magic purple element has been discoverd with abilites to distort spacetime. You appeared here with a sword, and a message. You have ${'???'/* put song duration once determined */} to `
-    + `collect ${Game.totalCrystalCount} purple crystals. Move with WASD. Swing your sword with J. This will deflect lasers. Travel back in time `
-    + `with K. When time-travelling, select a moment with A and D. You will see your time clones retracing your steps. Keep them safe, or else you may sever your timeline and destroy the spacetime continuum. Good luck!`,
+  desc: `A magic purple element has been discoverd with abilites to distort spacetime. You appeared here with a sword, and a message. You have `
+    + `approximately 3.5 minutes to collect ${Game.totalCrystalCount} purple crystals. Move with WASD. Swing your sword with J. This will deflect `
+    + `lasers. Travel back in time with K. When time-travelling, select a moment with A and D. You will see your time clones retracing your steps. `
+    + `Keep them safe, or else you may sever your timeline and destroy the spacetime continuum. Good luck!`,
+  button: 'Start',
 };
 
 const initialState = {
   popupProps: introPopupProps,
+  level: .25,
 };
 
 export default class GameView extends React.Component {
   state = initialState;
+  audio = new Audio(Music.Theme);
+
+  componentDidMount() {
+    this._setVolume(this.state.level);
+    this._hookup();
+  }
 
   render() {
     const game = this.props.game;
+    if (!game.onPause) {
+      this._hookup();
+    }
     const topLeft = new Vector(-320 / 2, -180 / 2).add(game.player.getWorldCenter()).clamp(
       new Vector(0, 0),
       new Vector(game.width * 58 + 6 - 320, game.height * 58 + 6 - 180)
@@ -67,15 +80,6 @@ export default class GameView extends React.Component {
               height={52}
             />
           )}
-          {game.timeLockedObjects.enemies.map((e, idx) => (
-            <EnemyImage
-              key={idx}
-              {...e.pos.subtract(topLeft)}
-              size={52}
-              showFlare={e.shouldDrawFlare(game.time)}
-              facing={e.facing}
-            />
-          ))}
           {game.timeLockedObjects.bullets.map((b, idx) => b.exists && (
             <Sprite
               key={idx}
@@ -83,6 +87,15 @@ export default class GameView extends React.Component {
               href={Sprites.Laser}
               width={52}
               height={52}
+            />
+          ))}
+          {game.timeLockedObjects.enemies.map((e, idx) => !e.isDead && (
+            <EnemyImage
+              key={idx}
+              {...e.pos.subtract(topLeft)}
+              size={52}
+              showFlare={e.shouldDrawFlare(game.time)}
+              facing={e.facing}
             />
           ))}
           <PlayerImage
@@ -102,7 +115,7 @@ export default class GameView extends React.Component {
               isFaded
             />
           ))}
-          <TimerOverlay timeRemaining={game.maxTime - game.time} />
+          <TimerOverlay timeRemaining={Game.maxTime - game.time} />
           <Sprite href={Sprites.Vignette} x={0} y={0} width={320} height={180} opacity={game.player.crystalCount / Game.totalCrystalCount} />
           {new Array(game.player.crystalCount).fill('').map((_, idx) => (
             <Sprite
@@ -117,13 +130,36 @@ export default class GameView extends React.Component {
         </Svg>
         {this.state.popupProps && <Popup {...this.state.popupProps} onContinue={() => {
           game.isPaused = false;
+          this.audio.currentTime = 0;
+          this.audio.play();
           this.setState({ popupProps: null });
         }} />}
         {game.getEndState() && <Popup {...game.getEndState()} onContinue={() => {
           this.props.onRestart();
           this.setState(initialState);
         }} />}
+        {/* <VolumeSlider level={this.state.level} onChangeLevel={this._setVolume} /> */}
       </Container>
     );
+  }
+
+  _setVolume = level => {
+    this.audio.volume = level;
+    initialState.level = level;
+    this.setState({ level })
+  }
+
+  _hookup = () => {
+    this.props.game.onPause = this._onPause;
+    this.props.game.onChangeTime = this._onChangeTime;
+  }
+
+  _onPause = () => {
+    this.audio.pause();
+  }
+
+  _onChangeTime = time => {
+    this.audio.currentTime = time;
+    this.audio.play();
   }
 }

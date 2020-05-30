@@ -7,7 +7,7 @@ export default class Player {
   constructor(pos) {
     this.pos = pos;
     this.center = new Vector(26, 26);
-    this.attackDuration = .1;
+    this.attackDuration = .15;
     this.facing = Direction.Right;
     this.moving = Direction.None;
     this.width = 13;

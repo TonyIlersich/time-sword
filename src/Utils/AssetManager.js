@@ -19,4 +19,5 @@ export const Sprites = {
 };
 
 export const Music = {
+  Theme: require('../Assets/Music/Time_Sword_Song.mp3'),
 };

@@ -40,6 +40,10 @@ export default class Bullet {
   isInWall(game) {
     const p = this.getWorldCenter().scale(1 / RoomSpacing);
     const wall = game.getWall(Math.floor(p.x), Math.floor(p.y), Direction.Left);
+    if (!wall) {
+      console.error('could not find wall for collision:', this, p);
+      return false;
+    }
     return p.x % 1 < RoomMargin / RoomSpacing && wall.type === WallType.Solid;
   }
   isTouchingPerson(center) {
